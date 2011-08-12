@@ -5,7 +5,7 @@ sealed trait Op {
   def get(key: Long): Option[Option[Array[Byte]]]
   
   def contains(key: Long) = get(key) map { _.isDefined }
-  
+
   def +(op: Op) = op match {
     case Composite(ops) => {
       val reduction = ops map collapse zip ops
