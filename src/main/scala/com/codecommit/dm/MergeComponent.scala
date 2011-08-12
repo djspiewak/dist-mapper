@@ -30,43 +30,21 @@ trait SeqMergeComponent extends MergeComponent {
 }
 
 trait ThreadedMergeComponent extends SeqMergeComponent with MutableJournalComponent {
-  lazy val MergerThreadPriority = 3
-  
-  override lazy val merger = new Merger with Runnable {
-    private val thread = {
-      val back = new Thread(this, "journal-merger")
-      back.setPriority(MergerThreadPriority)
-      back
-    }
+  override lazy val merger = new Merger with AsyncWorker {
+    val Priority = 3
+    val Name = "journal-merger"
     
-    private var killSignal = new Semaphore(1)       // a rather odd use of a semaphore...
-    
-    def spawn() {
-      thread.start()
-    }
-    
-    def kill() {
-      killSignal.acquire()
-    }
-    
-    def run() {
-      val shouldDie = killSignal.tryAcquire()
-      if (!shouldDie) {     // sanity check right at the beginning
-        try {
-          while (!killSignal.hasQueuedThreads) {
-            val ops = journal.journal
-            
-            if (!ops.isEmpty) {
-              val ops2 = mergeAll(ops)(repCanBuildFrom)
-              journal.compareAndSwapPartial(ops2, ops.last)       // assumes mutable component
-            } else {
-              wait(100)      // TODO do something clever, possibly with semaphores
-            }
-          }
-        } finally {
-          killSignal.release()
-        }  
+    protected def runOnce() {
+      val ops = journal.journal
+      
+      if (!ops.isEmpty) {
+        val ops2 = mergeAll(ops)(repCanBuildFrom)
+        journal.compareAndSwapPartial(ops2, ops.last)       // assumes mutable component
       }
+    }
+    
+    protected def awaitWork() {
+      Thread.sleep(100)         // TODO do something clever (preferably *much* more clever)
     }
   }
 }
