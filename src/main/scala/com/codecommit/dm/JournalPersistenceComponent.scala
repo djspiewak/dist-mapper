@@ -1,7 +1,7 @@
 package com.codecommit
 package dm
 
-import java.io.{OutputStream, FileOutputStream, BufferedOutputStream, IOException}
+import java.io._
 
 trait JournalPersistenceComponent extends JournalComponent {
   def journalPersister: JournalPersister
@@ -23,6 +23,19 @@ trait ThreadedJournalPersistenceComponent extends JournalPersistenceComponent {
   def JournalPersistenceDelay: Long
   
   def makeJournalFilename: String
+  def latestJournalFilename: String
+  
+  override def readInitialJournalState = {
+    var is: InputStream = null         // gross!
+    try {
+      is = new BufferedInputStream(new FileInputStream(latestJournalFilename))
+      journalSerializer.read(is)
+    } finally {
+      if (is != null) {
+        is.close()
+      }
+    }
+  }
   
   override lazy val journalPersister = new JournalPersister with AsyncWorker {
     val Priority = 3

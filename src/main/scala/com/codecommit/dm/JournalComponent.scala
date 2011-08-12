@@ -12,6 +12,8 @@ trait JournalComponent {
   
   def journal: Journal
   def journalSerializer: JournalSerializer
+  
+  def readInitialJournalState: JournalRep
 
   trait Journal {
     def journal: JournalRep
@@ -38,7 +40,7 @@ trait MutableJournalComponent extends JournalComponent {
   
   override lazy val journal = new Journal {
     private val lock = new AnyRef
-    private var _journal: JournalRep = Vector()
+    private var _journal: JournalRep = readInitialJournalState
     
     def journal = _journal
     
