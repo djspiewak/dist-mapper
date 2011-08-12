@@ -14,7 +14,7 @@ trait JournalComponent {
     def journal: JournalRep
     
     def push(op: Op): Journal
-    def peek: Op
+    def peek: Option[Op]
     def pop: Journal
     
     def compareAndSwapPartial(journal: JournalRep, marker: Op): Boolean
@@ -39,7 +39,7 @@ trait MutableJournalComponent extends JournalComponent {
       this
     }
     
-    def peek: Op = journal.head
+    def peek = journal.headOption
     
     def pop = lock synchronized {
       _journal = _journal.tail
