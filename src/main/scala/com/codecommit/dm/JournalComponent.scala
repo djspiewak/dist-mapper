@@ -1,6 +1,8 @@
 package com.codecommit
 package dm
 
+import java.io.{InputStream, OutputStream}
+
 /**
  * Cake abstraction for the journal.  Intended to be implemented using a mutable
  * backing store, but ''could'' be implemented immutably.
@@ -9,6 +11,7 @@ trait JournalComponent {
   type JournalRep
   
   def journal: Journal
+  def journalSerializer: JournalSerializer
 
   trait Journal {
     def journal: JournalRep
@@ -18,6 +21,11 @@ trait JournalComponent {
     def pop: Journal
     
     def compareAndSwapPartial(journal: JournalRep, marker: Op): Boolean
+  }
+  
+  trait JournalSerializer {
+    def read(is: InputStream): JournalRep
+    def write(rep: JournalRep, os: OutputStream)
   }
 }
 
@@ -57,5 +65,10 @@ trait MutableJournalComponent extends JournalComponent {
         false
       }
     }
+  }
+  
+  override lazy val journalSerializer = new JournalSerializer {
+    def read(is: InputStream) = Vector()               // TODO stub
+    def write(rep: JournalRep, os: OutputStream) {}    // TODO stub
   }
 }
