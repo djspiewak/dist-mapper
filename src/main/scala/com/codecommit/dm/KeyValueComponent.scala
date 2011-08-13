@@ -5,8 +5,8 @@ trait KeyValueComponent {
   def store: KeyValue
   
   trait KeyValue {
-    def get(key: Long): Option[Array[Byte]]
-    def contains(key: Long): Boolean
+    def get(key: Long)(back: Option[Array[Byte]] => Unit)
+    def contains(key: Long)(back: Boolean => Unit)
     def put(key: Long, value: Array[Byte])
     def delete(key: Long)
   }
@@ -18,19 +18,25 @@ trait JournaledKeyValueComponent extends KeyValueComponent with JournalComponent
   override def store: JournaledKeyValue
   
   trait JournaledKeyValue extends KeyValue {
-    final override def get(key: Long) = {
+    final override def get(key: Long)(back: Option[Array[Byte]] => Unit) {
       val result = journal.journal.view map { _ get key } collectFirst { case Some(res) => res }
-      result getOrElse getFromStore(key)
+      result match {
+        case Some(res) => back(res)
+        case None => getFromStore(key)(back)
+      }
     }
     
-    protected def getFromStore(key: Long): Option[Array[Byte]]
+    protected def getFromStore(key: Long)(back: Option[Array[Byte]] => Unit)
     
-    final override def contains(key: Long) = {
+    final override def contains(key: Long)(back: Boolean => Unit) {
       val result = journal.journal.view map { _ contains key } collectFirst { case Some(res) => res }
-      result getOrElse containsInStore(key)
+      result match {
+        case Some(res) => back(res)
+        case None => containsInStore(key)(back)
+      }
     }
     
-    protected def containsInStore(key: Long): Boolean
+    protected def containsInStore(key: Long)(back: Boolean => Unit)
     
     final override def put(key: Long, value: Array[Byte]) {
       journal.push(Modify(key, value))
