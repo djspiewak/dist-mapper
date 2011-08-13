@@ -6,6 +6,7 @@ trait BucketComponent {
   
   private lazy val Mask = (1 << bucketControl.Power) - 1
   
+  def trie: Trie
   def bucketControl: BucketControl
   
   trait BucketControl {
