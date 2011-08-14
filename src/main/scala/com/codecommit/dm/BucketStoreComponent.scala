@@ -147,7 +147,9 @@ trait NonRotatingBucketStoreComponent extends BucketStoreComponent {
       } catch {
         case e: IOException =>    // something very bad happened, log and move on
       } finally {
-        is.close()
+        if (is != null) {
+          is.close()
+        }
       }
     }
     
@@ -214,7 +216,9 @@ trait NonRotatingBucketStoreComponent extends BucketStoreComponent {
       } catch {
         case e: IOException =>    // something very bad happened, log and move on
       } finally {
-        os.close()
+        if (os != null) {
+          os.close()
+        }
       }
     }
     
