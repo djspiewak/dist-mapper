@@ -125,14 +125,72 @@ trait NonRotatingBucketStoreComponent extends BucketStoreComponent {
       var is: InputStream = null
       try {
         is = new BufferedInputStream(new FileInputStream(file))
-        val buffer = new Array[Pair](0)
-        // read file into array buffer
-        back(buffer)
+        
+        val result = new Array[Pair](1 << bucketControl.Power)
+        for (i <- 0 until result.length) {
+          val longBytes = new Array[Byte](8)
+          is.read(longBytes)
+          val key = bytesToLong(longBytes)
+          
+          if (key != -1L) {       // note: this means that -1 is an invalid key!
+            val intBytes = new Array[Byte](4)
+            is.read(intBytes)
+            
+            val value = new Array[Byte](bytesToInt(intBytes))
+            is.read(value)
+            
+            result(i) = (key, value)
+          }
+        }
+        
+        back(result)
       } catch {
         case e: IOException =>    // something very bad happened, log and move on
       } finally {
         is.close()
       }
+    }
+    
+    private def bytesToLong(bytes: Array[Byte]) = {
+      ((((((((0L | bytes(0))
+        << 8 | bytes(1))
+          << 8 | bytes(2))
+            << 8 | bytes(3))
+              << 8 | bytes(4))
+                << 8 | bytes(5))
+                  << 8 | bytes(6))
+                    << 8 | bytes(7))
+    }
+    
+    private def bytesToInt(bytes: Array[Byte]) = {
+      ((((0 | bytes(0))
+        << 8 | bytes(1))
+          << 8 | bytes(2))
+            << 8 | bytes(3))
+    }
+    
+    private def longToBytes(lng: Long): Array[Byte] = {
+      val back = new Array[Byte](8)
+      val mask = 0xFFL
+      back(7) = (lng & mask).toByte
+      back(6) = ((lng & (mask << 8)) >>> 8).toByte
+      back(5) = ((lng & (mask << 16)) >>> 16).toByte
+      back(4) = ((lng & (mask << 24)) >>> 24).toByte
+      back(3) = ((lng & (mask << 32)) >>> 32).toByte
+      back(2) = ((lng & (mask << 40)) >>> 40).toByte
+      back(1) = ((lng & (mask << 48)) >>> 48).toByte
+      back(0) = ((lng & (mask << 56)) >>> 56).toByte
+      back
+    }
+    
+    private def intToBytes(i: Int): Array[Byte] = {
+      val back = new Array[Byte](4)
+      val mask = 0xFF
+      back(3) = (i & mask).toByte
+      back(2) = ((i & (mask << 8)) >>> 8).toByte
+      back(1) = ((i & (mask << 16)) >>> 16).toByte
+      back(0) = ((i & (mask << 24)) >>> 32).toByte
+      back
     }
     
     override def write(file: String, pairs: Array[Pair]) {
@@ -143,7 +201,16 @@ trait NonRotatingBucketStoreComponent extends BucketStoreComponent {
       var os: OutputStream = null
       try {
         os = new BufferedOutputStream(new FileOutputStream(file))
-        // write all pairs into file
+        for (pair <- pairs) {
+          if (pair == null) {
+            os.write(longToBytes(-1L))
+          } else {
+            val (key, value) = pair
+            os.write(longToBytes(key))
+            os.write(intToBytes(value.length))
+            os.write(value)
+          }
+        }
       } catch {
         case e: IOException =>    // something very bad happened, log and move on
       } finally {
