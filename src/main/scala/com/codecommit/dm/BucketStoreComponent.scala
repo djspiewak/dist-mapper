@@ -26,7 +26,7 @@ trait BucketStoreComponent {
 trait NonRotatingBucketStoreComponent extends BucketStoreComponent {
   private type Pair = (Long, Array[Byte])
   
-  lazy val bucketStore = new BucketStore with AsyncWorker {
+  override lazy val bucketStore = new BucketStore with AsyncWorker {
     lazy val Priority = 9
     lazy val Name = "bucket-persister"
     
